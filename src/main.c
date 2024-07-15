@@ -20,7 +20,7 @@
 #define MCP23018_I2C_OLATA_ADDR 0x14 
 #define MCP23018_I2C_OLATB_ADDR 0x15
 
-#define MCP23018_I2C_GPPUA_ADDR 0x0C
+#define MCP23018_I2C_GPPUA_ADDR 0x0C	
 #define MCP23018_I2C_GPPUB_ADDR 0x0D
 //
 /* STEP 5 - Get the label of the I2C controller connected to your sensor */
@@ -63,7 +63,7 @@ void main(void)
 
 	//pull-up GPPUA
 	antena_setting[0] = MCP23018_I2C_GPPUA_ADDR;
-	antena_setting[1] = 0xFF; //all pins with Pull-up resistors
+	antena_setting[1] = 0xFF; 	//all pins with Pull-up resistors
 	ret = i2c_write(dev_i2c, antena_setting, sizeof(antena_setting),MCP23018_I2C_ADDR);
 	if(ret != 0){
 		printk("Failed to write input on bank A to I2C device address %x at Reg. %x \n", MCP23018_I2C_ADDR,antena_setting[0]);
@@ -75,14 +75,7 @@ void main(void)
 	if(ret != 0){
 		printk("Failed to write input on bank A to I2C device address %x at Reg. %x \n", MCP23018_I2C_ADDR,antena_setting[0]);
 	}
-	/*
-	uint8_t setting2[1]={0};
-	ret = i2c_write_read(dev_i2c, MCP23018_I2C_ADDR, 0x00, 1, &setting2[0], 1);
-	if(ret != 0){
-		printk("Failed to read input on bank A to I2C device address %x at Reg. %x \n", MCP23018_I2C_ADDR,setting2[0]);
-	} else {
-		printk("Wartosc zapisana na IODIRA = %x \n", setting2[0]);
-	}*/
+	
 	
 	while (1) {
 		for (int i = 1; i <= 12; i++)
@@ -320,26 +313,3 @@ void main(void)
 //     {D, D, D, R, R, R, R, R, R, R, D, D}, // Characteristic 11
 //     {D, D, D, D, R, R, R, R, R, R, R, D}, // Characteristic 12
 // ``` 
-
-/*
-			uint8_t antena_setting[2] = {MCP23018_I2C_GPIOA_ADDR,0xFF};
-			ret = i2c_write(dev_i2c, antena_setting, sizeof(antena_setting),MCP23018_I2C_ADDR);
-			if(ret != 0){
-				printk("Failed to write to I2C device address %x at Reg. %x \n", MCP23018_I2C_ADDR,antena_setting[0]);
-			}
-		
-			uint8_t GPIOs_regs[2] ={MCP23018_I2C_GPIOA_ADDR,MCP23018_I2C_GPIOB_ADDR};
-			uint8_t val_reading[2]= {0};	
-			ret = i2c_write_read(dev_i2c,MCP23018_I2C_ADDR,&GPIOs_regs[0],1,&val_reading[0],1);
-			if(ret != 0){
-				printk("Failed to write/read I2C device address %x at Reg. %x \n", MCP23018_I2C_ADDR,GPIOs_regs[0]);
-			}
-			ret = i2c_write_read(dev_i2c,MCP23018_I2C_ADDR,&GPIOs_regs[1],1,&val_reading[1],1);
-			if(ret != 0){
-				printk("Failed to write/read I2C device address %x at Reg. %x \n", MCP23018_I2C_ADDR,GPIOs_regs[1]);
-			}
-			*/
-			//ret = i2c_read(dev_i2c, &data, sizeof(data), MCP23018_I2C_ADDR);
-			//if(ret != 0){
-			//	printk("Failed to read from I2C device address %x at Reg. %x \n", MCP23018_I2C_ADDR,data);
-			//}
