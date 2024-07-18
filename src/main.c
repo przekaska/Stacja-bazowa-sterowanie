@@ -36,7 +36,16 @@
 #endif
 
 #define SW0_NODE	DT_ALIAS(sw0) 
-static const struct gpio_dt_spec button = GPIO_DT_SPEC_GET(SW0_NODE, gpios);
+#if DT_NODE_HAS_STATUS(SW0_NODE, okay)
+#define SW0_GPIO_LABEL  DT_GPIO_LABEL(SW0_NODE, gpios)
+#define SW0_GPIO_PIN    DT_GPIO_PIN(SW0_NODE, gpios)
+#define SW0_GPIO_FLAGS  DT_GPIO_FLAGS(SW0_NODE, gpios)
+#else
+#error "Unsupported board: sw0 devicetree alias is not defined"
+#define SW0_GPIO_LABEL  ""
+#define SW0_GPIO_PIN    0
+#define SW0_GPIO_FLAGS  0
+#endif
 
 void main(void)
 {
@@ -45,12 +54,6 @@ void main(void)
 	
 	int button_ret;
 	int counter = 0;
-
-	if (!device_is_ready(button.port)) 
-	{
-		printk("Button is not ready \n");
-		return -1;
-	}
 	
 	/* STEP 6 - Get the binding of the I2C driver  */
 	const struct device *dev_i2c = device_get_binding(I2C1);
@@ -98,13 +101,16 @@ void main(void)
 	} else {
 		printk("Wartosc zapisana na IODIRA = %x \n", setting2[0]);
 	}*/
-	button_ret = gpio_pin_configure_dt(&button, GPIO_INPUT);
-	if (button_ret < 0) {
-		printk("Pin configuration failed \n");
-		return -1;
-	}
+
+// 
+	button_ret = gpio_pin_configure(dev_i2c, SW0_GPIO_PIN, GPIO_INPUT | SW0_GPIO_FLAGS);
+    if (button_ret < 0) {
+        return;
+    }
+
 	while (1) {
-		bool button_val = gpio_pin_get_dt(&button);
+		bool button_val; //A variable that stores the status of the button (pressed = 1 , unpressed = 0)
+        button_val = gpio_pin_get(dev_i2c, SW0_GPIO_PIN);
 		if(button_val == 1){
 			printk("Button pressed \n");
 			counter += button_val;
