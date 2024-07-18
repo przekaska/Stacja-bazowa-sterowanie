@@ -3,27 +3,9 @@
 #include <devicetree.h>
 #include <drivers/i2c.h>	//header file of the I2C API
 #include <sys/printk.h>		//header for printing in console
+#include <drivers/gpio.h>	//header for GPIO/buttons
+#include "define.h"			//all of constant definitions
 
-
-#define SLEEP_TIME_MS   1000 	/* 1000 msec = 1 sec */
-
-#define MCP23018_I2C_ADDR	0x20	//Assumed address of expander - 0V on pin ADDR 
-#define MCP23018_IODIRA	0x00 		//Address of register to set direction on bank A
-#define MCP23018_IODIRB	0x01 		//Address of register to set direction on bank B
-#define MCP23018_IODIR_VAL	0x00 	//Setting every pin to output direction
-
-#define MCP23018_IOCON 0x00		//Not used - it is as default 
-
-// When IOCON.BANK = 0 - by default
-//#define MCP23018_I2C_GPIOA_ADDR 0x12	//Not used
-//#define MCP23018_I2C_GPIOB_ADDR 0x13	//Not used
-#define MCP23018_I2C_OLATA_ADDR 0x14 
-#define MCP23018_I2C_OLATB_ADDR 0x15
-
-#define MCP23018_I2C_GPPUA_ADDR 0x0C	
-#define MCP23018_I2C_GPPUB_ADDR 0x0D
-//
-/* STEP 5 - Get the label of the I2C controller connected to your sensor */
 #define I2C1_NODE DT_NODELABEL(i2c1)
 
 #if DT_NODE_HAS_STATUS(I2C1_NODE, okay)
@@ -32,6 +14,33 @@
 #error "I2C0 devicetree node is disabled"
 #define I2C1 ""
 #endif
+
+#if DT_NODE_HAS_STATUS(SW0_NODE, okay)
+#define SW0_GPIO_LABEL  DT_GPIO_LABEL(SW0_NODE, gpios)
+#define SW0_GPIO_PIN    DT_GPIO_PIN(SW0_NODE, gpios)
+#define SW0_GPIO_FLAGS  DT_GPIO_FLAGS(SW0_NODE, gpios)
+#else
+#error "Unsupported board: sw0 devicetree alias is not defined"
+#define SW0_GPIO_LABEL  ""
+#define SW0_GPIO_PIN    0
+#define SW0_GPIO_FLAGS  0
+#endif
+
+/* The devicetree node identifier for the "led0" alias. */
+#define LED0_NODE DT_ALIAS(led0)
+
+#if DT_NODE_HAS_STATUS(LED0_NODE, okay)
+#define LED0	DT_GPIO_LABEL(LED0_NODE, gpios)
+#define PIN	DT_GPIO_PIN(LED0_NODE, gpios)
+#define FLAGS	DT_GPIO_FLAGS(LED0_NODE, gpios)
+#else
+/* A build error here means your board isn't set up to blink an LED. */
+#error "Unsupported board: led0 devicetree alias is not defined"
+#define LED0	""
+#define PIN	0
+#define FLAGS	0
+#endif
+
 void main(void)
 {
 	int ret;
