@@ -18,7 +18,6 @@
 /* The devicetree node indentifire for the "sw0" alias*/
 #define SW0_NODE    DT_ALIAS(sw0)
 
-
 #if DT_NODE_HAS_STATUS(SW0_NODE, okay)
 #define SW0_GPIO_LABEL  DT_GPIO_LABEL(SW0_NODE, gpios)
 #define SW0_GPIO_PIN    DT_GPIO_PIN(SW0_NODE, gpios)
@@ -28,6 +27,19 @@
 #define SW0_GPIO_LABEL  ""
 #define SW0_GPIO_PIN    0
 #define SW0_GPIO_FLAGS  0
+#endif
+/* The devicetree node indentifire for the "sw1" alias*/
+#define SW1_NODE    DT_ALIAS(sw1)
+
+#if DT_NODE_HAS_STATUS(SW1_NODE, okay)
+#define SW1_GPIO_LABEL  DT_GPIO_LABEL(SW1_NODE, gpios)
+#define SW1_GPIO_PIN    DT_GPIO_PIN(SW1_NODE, gpios)
+#define SW1_GPIO_FLAGS  DT_GPIO_FLAGS(SW1_NODE, gpios)
+#else
+#error "Unsupported board: sw0 devicetree alias is not defined"
+#define SW1_GPIO_LABEL  ""
+#define SW1_GPIO_PIN    0
+#define SW1_GPIO_FLAGS  0
 #endif
 /* The devicetree node identifier for the "led0" alias. */
 #define LED0_NODE DT_ALIAS(led0)
@@ -44,6 +56,20 @@
 #define FLAGS	0
 #endif
 
+#define LED1_NODE DT_ALIAS(led1)
+
+
+#if DT_NODE_HAS_STATUS(LED1_NODE, okay)
+#define LED1	DT_GPIO_LABEL(LED1_NODE, gpios)
+#define PIN1	DT_GPIO_PIN(LED1_NODE, gpios)
+#define FLAGS1	DT_GPIO_FLAGS(LED1_NODE, gpios)
+#else
+/* A build error here means your board isn't set up to blink an LED. */
+#error "Unsupported board: led1 devicetree alias is not defined"
+#define LED1	""
+#define PIN1	0
+#define FLAGS1	0
+#endif
 int i = 1;
 
 void button_pressed1(const struct device *dev, struct gpio_callback *cb,
@@ -51,10 +77,18 @@ void button_pressed1(const struct device *dev, struct gpio_callback *cb,
 {
 	gpio_pin_toggle(dev,PIN);
 	i = i+1;
-	printk("gowno i = %x \n", i);
+}
+
+void button_pressed2(const struct device *dev2, struct gpio_callback *cb,
+		    uint32_t pins)
+{
+	gpio_pin_toggle(dev2,PIN1);
+	i = i-1;
 }
 /* Define a variable of type static struct gpio_callback */
 static struct gpio_callback button_cb_data;
+static struct gpio_callback button_cb_data2;
+
 
 void main(void)
 {
@@ -62,9 +96,14 @@ void main(void)
 	uint8_t antena_setting[2];
 	
 	const struct device *dev;
+	const struct device *dev2;
 
 	dev = device_get_binding(LED0);
 	if (dev == NULL) {
+		return;
+	}
+	dev2 = device_get_binding(LED1);
+	if (dev2 == NULL) {
 		return;
 	}
 
@@ -73,8 +112,17 @@ void main(void)
 		return;
 	}
 
-
 	ret = gpio_pin_configure(dev, SW0_GPIO_PIN, GPIO_INPUT | SW0_GPIO_FLAGS);
+    if (ret < 0) {
+        return;
+    }
+
+	ret = gpio_pin_configure(dev2, PIN1, GPIO_OUTPUT_ACTIVE | FLAGS1);
+	if (ret < 0) {
+		return;
+	}
+
+	ret = gpio_pin_configure(dev2, SW1_GPIO_PIN, GPIO_INPUT | SW1_GPIO_FLAGS);
     if (ret < 0) {
         return;
     }
@@ -85,6 +133,12 @@ void main(void)
 	/* STEP 7 - Add the callback function by calling gpio_add_callback()   */
 	gpio_add_callback(dev, &button_cb_data);	
 	
+	ret = gpio_pin_interrupt_configure(dev,SW1_GPIO_PIN,GPIO_INT_EDGE_TO_ACTIVE | GPIO_INT_DEBOUNCE);	
+	/* STEP 6 - Initialize the static struct gpio_callback variable   */
+	gpio_init_callback(&button_cb_data2, button_pressed2, BIT(SW1_GPIO_PIN));	
+	/* STEP 7 - Add the callback function by calling gpio_add_callback()   */
+	gpio_add_callback(dev2, &button_cb_data2);
+
 	/*Get the binding of the I2C driver  */
 	const struct device *dev_i2c = device_get_binding(I2C1);
 	if (dev_i2c == NULL) {
@@ -320,7 +374,7 @@ void main(void)
 				break;
 			
 			default:
-				printk("error wartosc poza zakresem: %x\n",i);
+				printk("error out of bounds: %x\n",i);
 				break;
 			}
 
@@ -341,6 +395,9 @@ void main(void)
 		k_msleep(SLEEP_TIME_MS);
 		if (i>12){
 			i=1;
+		}
+		if (i<=0){
+			i=12;
 		}
 	}
 
