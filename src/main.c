@@ -1,62 +1,59 @@
-#include <zephyr.h>
-#include <device.h>
-#include <devicetree.h>
-#include <drivers/i2c.h>	//header file of the I2C API
-#include <sys/printk.h>		//header for printing in console
+#include <zephyr/kernel.h>
+#include <zephyr/device.h>
+#include <zephyr/devicetree.h>
+#include <zephyr/drivers/i2c.h>	//header file of the I2C API
+#include <zephyr/sys/printk.h>		//header for printing in console
 
 
 #define SLEEP_TIME_MS   1000 	/* 1000 msec = 1 sec */
 
 #define MCP23018_I2C_ADDR	0x20	//Assumed address of expander - 0V on pin ADDR 
-#define MCP23018_IODIRA	0x00 		//Address of register to set direction on bank A
-#define MCP23018_IODIRB	0x01 		//Address of register to set direction on bank B
+
+#define MCP23018_IODIRA		0x00 		//Address of register to set direction on bank A
+#define MCP23018_IODIRB		0x01 		//Address of register to set direction on bank B
 #define MCP23018_IODIR_VAL	0x00 	//Setting every pin to output direction
 
-#define MCP23018_IOCON 0x00		//Not used - it is as default 
+#define MCP23018_IOCON 		0x00		//Not used - it is as default 
 
-// When IOCON.BANK = 0 - by default
-//#define MCP23018_I2C_GPIOA_ADDR 0x12	//Not used
-//#define MCP23018_I2C_GPIOB_ADDR 0x13	//Not used
 #define MCP23018_I2C_OLATA_ADDR 0x14 
 #define MCP23018_I2C_OLATB_ADDR 0x15
 
 #define MCP23018_I2C_GPPUA_ADDR 0x0C
 #define MCP23018_I2C_GPPUB_ADDR 0x0D
 //
-/* STEP 5 - Get the label of the I2C controller connected to your sensor */
-#define I2C1_NODE DT_NODELABEL(i2c1)
+#define I2C1_NODE DT_NODELABEL(antena)
 
-#if DT_NODE_HAS_STATUS(I2C1_NODE, okay)
-#define I2C1 DT_LABEL(I2C1_NODE)
-#else
-#error "I2C0 devicetree node is disabled"
-#define I2C1 ""
-#endif
+
+//#if DT_NODE_HAS_STATUS(I2C1_NODE, okay)
+//#define I2C1 DT_LABEL(I2C1_NODE)
+//#else
+//#error "I2C0 devicetree node is disabled"
+//#define I2C1 ""
+//#endif
 void main(void)
 {
 	int ret;
-	uint8_t antena_setting[2];
+	static const struct i2c_dt_spec dev_i2c = I2C_DT_SPEC_GET(I2C1_NODE);
+    if (!device_is_ready(dev_i2c.bus)) {
+        printk("I2C bus %s is not ready!\n", dev_i2c.bus->name);
+        return;
+    }
 	
-	/* STEP 6 - Get the binding of the I2C driver  */
-	const struct device *dev_i2c = device_get_binding(I2C1);
-	if (dev_i2c == NULL) {
-		printk("Could not find  %s!\n\r",I2C1);
-		return;
-	}
+	uint8_t antena_setting[2];
 	
 	//set output bank A
 	antena_setting[0] = MCP23018_IODIRA;
 	antena_setting[1] = MCP23018_IODIR_VAL; 
-	ret = i2c_write(dev_i2c, antena_setting, sizeof(antena_setting),MCP23018_I2C_ADDR);
+	ret = i2c_write_dt(&dev_i2c, antena_setting, sizeof(antena_setting));
 	if(ret != 0){
-		printk("Failed to write input on bank A to I2C device address %x at Reg. %x \n", MCP23018_I2C_ADDR,antena_setting[0]);
+		printk("Failed to write input on bank A to I2C device address %x at Reg. %x Value of %x\n", dev_i2c.addr ,antena_setting[0],antena_setting[1]);
 	}
 	//set output bank B
 	antena_setting[0] = MCP23018_IODIRB;
 	antena_setting[1] = MCP23018_IODIR_VAL; 
-	ret = i2c_write(dev_i2c, antena_setting, sizeof(antena_setting),MCP23018_I2C_ADDR);
+	ret = i2c_write_dt(&dev_i2c, antena_setting, sizeof(antena_setting));
 	if(ret != 0){
-		printk("Failed to write input on bank A to I2C device address %x at Reg. %x \n", MCP23018_I2C_ADDR,antena_setting[0]);
+		printk("Failed to write input on bank B to I2C device address %x at Reg. %x \n", dev_i2c.addr,antena_setting[0]);
 	}
 
 	k_msleep(1000);
@@ -64,16 +61,16 @@ void main(void)
 	//pull-up GPPUA
 	antena_setting[0] = MCP23018_I2C_GPPUA_ADDR;
 	antena_setting[1] = 0xFF; //all pins with Pull-up resistors
-	ret = i2c_write(dev_i2c, antena_setting, sizeof(antena_setting),MCP23018_I2C_ADDR);
+	ret = i2c_write_dt(&dev_i2c, antena_setting, sizeof(antena_setting));
 	if(ret != 0){
-		printk("Failed to write input on bank A to I2C device address %x at Reg. %x \n", MCP23018_I2C_ADDR,antena_setting[0]);
+		printk("Failed to write input on bank A to I2C device address %x at Reg. %x \n", dev_i2c.addr,antena_setting[0]);
 	}
 	//pull-up GPPUB
 	antena_setting[0] = MCP23018_I2C_GPPUB_ADDR;
 	antena_setting[1] = 0xFF; 	//all pins with Pull-up resistors
-	ret = i2c_write(dev_i2c, antena_setting, sizeof(antena_setting),MCP23018_I2C_ADDR);
+	ret = i2c_write_dt(&dev_i2c, antena_setting, sizeof(antena_setting));
 	if(ret != 0){
-		printk("Failed to write input on bank A to I2C device address %x at Reg. %x \n", MCP23018_I2C_ADDR,antena_setting[0]);
+		printk("Failed to write input on bank A to I2C device address %x at Reg. %x \n", dev_i2c.addr,antena_setting[0]);
 	}
 	/*
 	uint8_t setting2[1]={0};
@@ -92,28 +89,28 @@ void main(void)
 			case 1:
 				antena_setting[0]= MCP23018_I2C_OLATA_ADDR;
 				antena_setting[1]= 0x00;
-				ret = i2c_write(dev_i2c, antena_setting, sizeof(antena_setting),MCP23018_I2C_ADDR);
+				ret = i2c_write_dt(&dev_i2c, antena_setting, sizeof(antena_setting));
 				if(ret != 0){
-					printk("Failed to write values to OLATA %x at Reg. %x \n", MCP23018_I2C_ADDR,antena_setting[0]);
+					printk("Failed to write values to OLATA %x at Reg. %x \n", dev_i2c.addr,antena_setting[0]);
 				}
 				antena_setting[0]= MCP23018_I2C_OLATB_ADDR;
 				antena_setting[1]= 0x1F;
-				ret = i2c_write(dev_i2c, antena_setting, sizeof(antena_setting),MCP23018_I2C_ADDR);
+				ret = i2c_write_dt(&dev_i2c, antena_setting, sizeof(antena_setting));
 				if(ret != 0){
-					printk("Failed to write values to OLATB %x at Reg. %x \n", MCP23018_I2C_ADDR,antena_setting[0]);
+					printk("Failed to write values to OLATB %x at Reg. %x \n", dev_i2c.addr,antena_setting[0]);
 				}
 				printk("{D, D, D, D, D, R, R, R, R, R, R, R}, // Characteristic  1 \n");
 				break;
 			case 2:
 				antena_setting[0]= MCP23018_I2C_OLATA_ADDR;
 				antena_setting[1]= 0x00;
-				ret = i2c_write(dev_i2c, antena_setting, sizeof(antena_setting),MCP23018_I2C_ADDR);
+				ret = i2c_write_dt(&dev_i2c, antena_setting, sizeof(antena_setting));
 				if(ret != 0){
 					printk("Failed to write values to OLATA %x at Reg. %x \n", MCP23018_I2C_ADDR,antena_setting[0]);
 				}
 				antena_setting[0]= MCP23018_I2C_OLATB_ADDR;
 				antena_setting[1]= 0x3E;
-				ret = i2c_write(dev_i2c, antena_setting, sizeof(antena_setting),MCP23018_I2C_ADDR);
+				ret = i2c_write_dt(&dev_i2c, antena_setting, sizeof(antena_setting));
 				if(ret != 0){
 					printk("Failed to write values to OLATB %x at Reg. %x \n", MCP23018_I2C_ADDR,antena_setting[0]);
 				}
@@ -122,13 +119,13 @@ void main(void)
 			case 3:
 				antena_setting[0]= MCP23018_I2C_OLATA_ADDR;
 				antena_setting[1]= 0x01;
-				ret = i2c_write(dev_i2c, antena_setting, sizeof(antena_setting),MCP23018_I2C_ADDR);
+				ret = i2c_write_dt(&dev_i2c, antena_setting, sizeof(antena_setting));
 				if(ret != 0){
 					printk("Failed to write values to OLATA %x at Reg. %x \n", MCP23018_I2C_ADDR,antena_setting[0]);
 				}
 				antena_setting[0]= MCP23018_I2C_OLATB_ADDR;
 				antena_setting[1]= 0x3C;
-				ret = i2c_write(dev_i2c, antena_setting, sizeof(antena_setting),MCP23018_I2C_ADDR);
+				ret = i2c_write_dt(&dev_i2c, antena_setting, sizeof(antena_setting));
 				if(ret != 0){
 					printk("Failed to write values to OLATB %x at Reg. %x \n", MCP23018_I2C_ADDR,antena_setting[0]);
 				}
@@ -138,13 +135,13 @@ void main(void)
 			case 4:
 				antena_setting[0]= MCP23018_I2C_OLATA_ADDR;
 				antena_setting[1]= 0x03;
-				ret = i2c_write(dev_i2c, antena_setting, sizeof(antena_setting),MCP23018_I2C_ADDR);
+				ret = i2c_write_dt(&dev_i2c, antena_setting, sizeof(antena_setting));
 				if(ret != 0){
 					printk("Failed to write values to OLATA %x at Reg. %x \n", MCP23018_I2C_ADDR,antena_setting[0]);
 				}
 				antena_setting[0]= MCP23018_I2C_OLATB_ADDR;
 				antena_setting[1]= 0x38;
-				ret = i2c_write(dev_i2c, antena_setting, sizeof(antena_setting),MCP23018_I2C_ADDR);
+				ret = i2c_write_dt(&dev_i2c, antena_setting, sizeof(antena_setting));
 				if(ret != 0){
 					printk("Failed to write values to OLATB %x at Reg. %x \n", MCP23018_I2C_ADDR,antena_setting[0]);
 				}
@@ -154,13 +151,13 @@ void main(void)
 			case 5:
 				antena_setting[0]= MCP23018_I2C_OLATA_ADDR;
 				antena_setting[1]= 0x07;
-				ret = i2c_write(dev_i2c, antena_setting, sizeof(antena_setting),MCP23018_I2C_ADDR);
+				ret = i2c_write_dt(&dev_i2c, antena_setting, sizeof(antena_setting));
 				if(ret != 0){
 					printk("Failed to write values to OLATA %x at Reg. %x \n", MCP23018_I2C_ADDR,antena_setting[0]);
 				}
 				antena_setting[0]= MCP23018_I2C_OLATB_ADDR;
 				antena_setting[1]= 0x30;
-				ret = i2c_write(dev_i2c, antena_setting, sizeof(antena_setting),MCP23018_I2C_ADDR);
+				ret = i2c_write_dt(&dev_i2c, antena_setting, sizeof(antena_setting));
 				if(ret != 0){
 					printk("Failed to write values to OLATB %x at Reg. %x \n", MCP23018_I2C_ADDR,antena_setting[0]);
 				}
@@ -170,13 +167,13 @@ void main(void)
 			case 6:
 				antena_setting[0]= MCP23018_I2C_OLATA_ADDR;
 				antena_setting[1]= 0x0F;
-				ret = i2c_write(dev_i2c, antena_setting, sizeof(antena_setting),MCP23018_I2C_ADDR);
+				ret = i2c_write_dt(&dev_i2c, antena_setting, sizeof(antena_setting));
 				if(ret != 0){
 					printk("Failed to write values to OLATA %x at Reg. %x \n", MCP23018_I2C_ADDR,antena_setting[0]);
 				}
 				antena_setting[0]= MCP23018_I2C_OLATB_ADDR;
 				antena_setting[1]= 0x20;
-				ret = i2c_write(dev_i2c, antena_setting, sizeof(antena_setting),MCP23018_I2C_ADDR);
+				ret = i2c_write_dt(&dev_i2c, antena_setting, sizeof(antena_setting));
 				if(ret != 0){
 					printk("Failed to write values to OLATB %x at Reg. %x \n", MCP23018_I2C_ADDR,antena_setting[0]);
 				}
@@ -186,13 +183,13 @@ void main(void)
 			case 7:
 				antena_setting[0]= MCP23018_I2C_OLATA_ADDR;
 				antena_setting[1]= 0x1F;
-				ret = i2c_write(dev_i2c, antena_setting, sizeof(antena_setting),MCP23018_I2C_ADDR);
+				ret = i2c_write_dt(&dev_i2c, antena_setting, sizeof(antena_setting));
 				if(ret != 0){
 					printk("Failed to write values to OLATA %x at Reg. %x \n", MCP23018_I2C_ADDR,antena_setting[0]);
 				}
 				antena_setting[0]= MCP23018_I2C_OLATB_ADDR;
 				antena_setting[1]= 0x00;
-				ret = i2c_write(dev_i2c, antena_setting, sizeof(antena_setting),MCP23018_I2C_ADDR);
+				ret = i2c_write_dt(&dev_i2c, antena_setting, sizeof(antena_setting));
 				if(ret != 0){
 					printk("Failed to write values to OLATB %x at Reg. %x \n", MCP23018_I2C_ADDR,antena_setting[0]);
 				}
@@ -202,13 +199,13 @@ void main(void)
 			case 8:
 				antena_setting[0]= MCP23018_I2C_OLATA_ADDR;
 				antena_setting[1]= 0x3E;
-				ret = i2c_write(dev_i2c, antena_setting, sizeof(antena_setting),MCP23018_I2C_ADDR);
+				ret = i2c_write_dt(&dev_i2c, antena_setting, sizeof(antena_setting));
 				if(ret != 0){
 					printk("Failed to write values to OLATA %x at Reg. %x \n", MCP23018_I2C_ADDR,antena_setting[0]);
 				}
 				antena_setting[0]= MCP23018_I2C_OLATB_ADDR;
 				antena_setting[1]= 0x00;
-				ret = i2c_write(dev_i2c, antena_setting, sizeof(antena_setting),MCP23018_I2C_ADDR);
+				ret = i2c_write_dt(&dev_i2c, antena_setting, sizeof(antena_setting));
 				if(ret != 0){
 					printk("Failed to write values to OLATB %x at Reg. %x \n", MCP23018_I2C_ADDR,antena_setting[0]);
 				}
@@ -218,13 +215,13 @@ void main(void)
 			case 9:
 				antena_setting[0]= MCP23018_I2C_OLATA_ADDR;
 				antena_setting[1]= 0x3C;
-				ret = i2c_write(dev_i2c, antena_setting, sizeof(antena_setting),MCP23018_I2C_ADDR);
+				ret = i2c_write_dt(&dev_i2c, antena_setting, sizeof(antena_setting));
 				if(ret != 0){
 					printk("Failed to write values to OLATA %x at Reg. %x \n", MCP23018_I2C_ADDR,antena_setting[0]);
 				}
 				antena_setting[0]= MCP23018_I2C_OLATB_ADDR;
 				antena_setting[1]= 0x01;
-				ret = i2c_write(dev_i2c, antena_setting, sizeof(antena_setting),MCP23018_I2C_ADDR);
+				ret = i2c_write_dt(&dev_i2c, antena_setting, sizeof(antena_setting));
 				if(ret != 0){
 					printk("Failed to write values to OLATB %x at Reg. %x \n", MCP23018_I2C_ADDR,antena_setting[0]);
 				}
@@ -234,13 +231,13 @@ void main(void)
 			case 10:
 				antena_setting[0]= MCP23018_I2C_OLATA_ADDR;
 				antena_setting[1]= 0x38;
-				ret = i2c_write(dev_i2c, antena_setting, sizeof(antena_setting),MCP23018_I2C_ADDR);
+				ret = i2c_write_dt(&dev_i2c, antena_setting, sizeof(antena_setting));
 				if(ret != 0){
 					printk("Failed to write values to OLATA %x at Reg. %x \n", MCP23018_I2C_ADDR,antena_setting[0]);
 				}
 				antena_setting[0]= MCP23018_I2C_OLATB_ADDR;
 				antena_setting[1]= 0x03;
-				ret = i2c_write(dev_i2c, antena_setting, sizeof(antena_setting),MCP23018_I2C_ADDR);
+				ret = i2c_write_dt(&dev_i2c, antena_setting, sizeof(antena_setting));
 				if(ret != 0){
 					printk("Failed to write values to OLATB %x at Reg. %x \n", MCP23018_I2C_ADDR,antena_setting[0]);
 				}
@@ -250,13 +247,13 @@ void main(void)
 			case 11:
 				antena_setting[0]= MCP23018_I2C_OLATA_ADDR;
 				antena_setting[1]= 0x30;
-				ret = i2c_write(dev_i2c, antena_setting, sizeof(antena_setting),MCP23018_I2C_ADDR);
+				ret = i2c_write_dt(&dev_i2c, antena_setting, sizeof(antena_setting));
 				if(ret != 0){
 					printk("Failed to write values to OLATA %x at Reg. %x \n", MCP23018_I2C_ADDR,antena_setting[0]);
 				}
 				antena_setting[0]= MCP23018_I2C_OLATB_ADDR;
 				antena_setting[1]= 0x07;
-				ret = i2c_write(dev_i2c, antena_setting, sizeof(antena_setting),MCP23018_I2C_ADDR);
+				ret = i2c_write_dt(&dev_i2c, antena_setting, sizeof(antena_setting));
 				if(ret != 0){
 					printk("Failed to write values to OLATB %x at Reg. %x \n", MCP23018_I2C_ADDR,antena_setting[0]);
 				}
@@ -266,13 +263,13 @@ void main(void)
 			case 12:
 				antena_setting[0]= MCP23018_I2C_OLATA_ADDR;
 				antena_setting[1]= 0x20;
-				ret = i2c_write(dev_i2c, antena_setting, sizeof(antena_setting),MCP23018_I2C_ADDR);
+				ret = i2c_write_dt(&dev_i2c, antena_setting, sizeof(antena_setting));
 				if(ret != 0){
 					printk("Failed to write values to OLATA %x at Reg. %x \n", MCP23018_I2C_ADDR,antena_setting[0]);
 				}
 				antena_setting[0]= MCP23018_I2C_OLATB_ADDR;
 				antena_setting[1]= 0x0F;
-				ret = i2c_write(dev_i2c, antena_setting, sizeof(antena_setting),MCP23018_I2C_ADDR);
+				ret = i2c_write_dt(&dev_i2c, antena_setting, sizeof(antena_setting));
 				if(ret != 0){
 					printk("Failed to write values to OLATB %x at Reg. %x \n", MCP23018_I2C_ADDR,antena_setting[0]);
 				}
@@ -288,13 +285,13 @@ void main(void)
 			
 			uint8_t GPIOs_regs[2] ={MCP23018_I2C_OLATA_ADDR,MCP23018_I2C_OLATB_ADDR};
 			uint8_t val_reading[2]= {0};	
-			ret = i2c_write_read(dev_i2c,MCP23018_I2C_ADDR,&GPIOs_regs[0],1,&val_reading[0],1);
+			ret = i2c_write_read_dt(&dev_i2c,&GPIOs_regs[0],1,&val_reading[0],1);
 			if(ret != 0){
-				printk("Failed to write/read I2C device address %x at Reg. %x \n", MCP23018_I2C_ADDR,GPIOs_regs[0]);
+				printk("Failed to write/read I2C device address %x at Reg. %x \n", dev_i2c.addr,GPIOs_regs[0]);
 			}
-			ret = i2c_write_read(dev_i2c,MCP23018_I2C_ADDR,&GPIOs_regs[1],1,&val_reading[1],1);
+			ret = i2c_write_read_dt(&dev_i2c,&GPIOs_regs[0],1,&val_reading[0],1);
 			if(ret != 0){
-				printk("Failed to write/read I2C device address %x at Reg. %x \n", MCP23018_I2C_ADDR,GPIOs_regs[1]);
+				printk("Failed to write/read I2C device address %x at Reg. %x \n", dev_i2c.addr,GPIOs_regs[1]);
 			}
 			printk("Zapisane bank A = %x \n", val_reading[1]);
 			printk("Zapisane bank B = %x \n\n", val_reading[0]);
@@ -323,7 +320,7 @@ void main(void)
 
 /*
 			uint8_t antena_setting[2] = {MCP23018_I2C_GPIOA_ADDR,0xFF};
-			ret = i2c_write(dev_i2c, antena_setting, sizeof(antena_setting),MCP23018_I2C_ADDR);
+			ret = i2c_write_dt(&dev_i2c, antena_setting, sizeof(antena_setting));
 			if(ret != 0){
 				printk("Failed to write to I2C device address %x at Reg. %x \n", MCP23018_I2C_ADDR,antena_setting[0]);
 			}
@@ -334,7 +331,7 @@ void main(void)
 			if(ret != 0){
 				printk("Failed to write/read I2C device address %x at Reg. %x \n", MCP23018_I2C_ADDR,GPIOs_regs[0]);
 			}
-			ret = i2c_write_read(dev_i2c,MCP23018_I2C_ADDR,&GPIOs_regs[1],1,&val_reading[1],1);
+			ret = i2c_write_read_dt(&dev_i2c,&GPIOs_regs[0],1,&val_reading[0],1);
 			if(ret != 0){
 				printk("Failed to write/read I2C device address %x at Reg. %x \n", MCP23018_I2C_ADDR,GPIOs_regs[1]);
 			}
